@@ -1,4 +1,4 @@
-type Employee = {
+export type Employee = {
     name: string,
     age: number,
     salary: number
@@ -14,6 +14,8 @@ const e2: Partial<Employee> = {
     name: 'Donald Duck',
     age: 33
 }
+
+type PartialEmployee = Partial<Employee>
 
 const e3: Pick<Employee, "name" | "age"> = {
     name: 'Donald Duck',
@@ -41,7 +43,27 @@ type FinishedState = Extract<State, {status: 'failed' | 'ok'}>
 
 type FinishedState2 = Exclude<State, {status: 'loading'}>
 
-const statusCodes: Readonly<Record<string, number>> = {
+type R = Record<string, number>
+
+type KeyTypes = keyof any
+
+const c: R = {
+  temperature: 4,
+  humidity: 37,
+  [0]: 11
+}
+
+type R2 = Record<number, number>
+
+const c2: R2 = {
+  [0]: 4,
+  "dog": 7
+}
+console.log(c)
+
+type HttpRecord = Readonly<Record<string, number>>
+
+const statusCodes: HttpRecord = {
     "ok": 200,
     "Not found": 404,
     "Internal Server Error": 500

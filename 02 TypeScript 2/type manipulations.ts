@@ -1,4 +1,4 @@
-const constStatusCodes = {
+export const constStatusCodes = {
     ok: 200,
     "Not found": 404,
     "Internal Server Error": 500
@@ -10,6 +10,8 @@ type StatusCodeKeys = keyof StatusCodes
 function objectKeys<T extends {}>(obj: T): Array<keyof T> {
     return Object.keys(obj) as Array<keyof T>
 }
+
+const keys = objectKeys(constStatusCodes)
 
 function statusText(code: StatusCodes[StatusCodeKeys]): StatusCodeKeys | undefined {
     for(let text of objectKeys(constStatusCodes)) {

@@ -1,4 +1,4 @@
-type Species = 'Dog' | 'Cat'
+export type Species = 'Dog' | 'Cat'
 
 type Dog = 'Boxer' | 'Husky' | 'German Shepard'
 type Cat = 'Siamese' | 'Persian' | 'Manx'

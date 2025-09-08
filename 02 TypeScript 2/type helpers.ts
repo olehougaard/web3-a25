@@ -1,4 +1,4 @@
-type Species = 'Dog' | 'Cat'
+export type Species = 'Dog' | 'Cat'
 
 type Dog = 'Boxer' | 'Husky' | 'German Shepard'
 type Cat = 'Siamese' | 'Persian' | 'Manx'
@@ -29,3 +29,16 @@ type X = FieldType<State, 'status'>
 type Y = FieldType<State, 'statusCode'>
 
 type Y2 = State['statusCode']
+
+function f(x: number, y:number): number {
+  return x + y
+}
+
+type NumberNumberNumber = typeof f
+
+type NNNArgs = Parameters<NumberNumberNumber>
+type ArgX = NNNArgs[0]
+type NNNReturn = ReturnType<NumberNumberNumber>
+
+type RT<T extends (...args: any) => any> = 
+  T extends (...args: any) => infer R? R : any

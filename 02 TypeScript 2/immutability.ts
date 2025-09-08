@@ -1,4 +1,4 @@
-const statusCodes = {
+export const statusCodes = {
     ok: 200,
     "Not found": 404,
     "Internal Server Error": 500
