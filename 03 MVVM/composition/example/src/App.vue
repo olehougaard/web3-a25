@@ -18,11 +18,11 @@
       error.value = 'Person already hired'
       return
     }
-    if (this.salary <= 0) {
+    if (salary.value <= 0) {
       error.value = 'Salary must be positive'
       return
     }
-    model = model.hire(person, this.salary)
+    model = model.hire(person, salary.value)
     personData.value = model.personData()
     salary.value = 0
     error.value = undefined
