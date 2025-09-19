@@ -18,21 +18,21 @@
 <template>
     <table id = 'board'>
         <tr v-for='row in tiles()'>
-          <td name="tile" v-for='tile in row' class="cell">
-            <slot name="tile" v-bind="tile" class="cell"></slot>
+          <td name="tile" v-for='tile in row' class='cell'>
+            <slot name="tile" v-bind='tile'></slot>
           </td>
         </tr>
     </table>
 </template>
 
 <style>
-.cell {
-  width: 40px;
-  height: 40px;
-  border: 1px solid black;
-}
-table {
-  border: 1px solid black;
-  border-spacing: 0;
-}
+  .cell {
+    width: 40px;
+    height: 40px;
+    border: 1px solid black;
+  }
+  table {
+    border: 1px solid black;
+    border-spacing: 0;
+  }
 </style>
