@@ -1,0 +1,19 @@
+.blank {
+  background: white;
+  cursor: pointer;
+}
+.inert {
+  background: white;
+}
+.X {
+  background-image: url(@/assets/X.png);
+}
+.O {
+  background-image: url(@/assets/O.png);
+}
+.tile {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}

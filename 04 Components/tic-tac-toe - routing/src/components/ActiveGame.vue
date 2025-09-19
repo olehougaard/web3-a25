@@ -1,8 +1,8 @@
 <script setup lang="ts">
   import { computed, onMounted, inject } from 'vue'
-  import BoardView from '@/components/Board.vue'
   import { model } from '@/api/store'
   import type { API } from '@/api/api'
+  import Grid from './Grid.vue'
 
   const api = inject<API>('api')
 
@@ -55,7 +55,11 @@
 <template>
   <div id = 'game'>
     <p id = 'messages'>{{ message() }}</p>
-    <board-view :enabled='enabled' :board='board' @click='makeMove'/>
+    <grid :rows="board.length" :cols="board[0].length">
+      <template #tile="{row, col}">
+        <div class = 'tile' :class='board[row][col] ?? "blank"' @click='makeMove(col, row)'></div>
+      </template>
+    </grid>
     <button v-if="enabled" @click="concede">Concede</button>
   </div>
 </template>
