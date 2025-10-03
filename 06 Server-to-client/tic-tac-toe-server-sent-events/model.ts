@@ -1,38 +1,52 @@
-export type Player = 'X' | 'O'
-export type Tile = Player | null
-export type Board = Tile[][]
+import * as z from 'zod'
 
-export type Move = {
-    conceded: false
-    x: number
-    y: number
-    player: Player
-  }
-  | {
-    conceded: true
-    player: Player
-  }
+const Player = z.enum(['X', 'O'])
+const Tile = z.nullable(Player)
+const Board = z.array(z.array(Tile).length(3)).length(3)
 
-const array = <T>(length: number, init: (index: number) => T) => Array.from(new Array(length), (_, i) => init(i))
+export type Player = z.infer<typeof Player>
+export type Tile = z.infer<typeof Tile>
+export type Board = z.infer<typeof Board>
 
-const updateArray = <T>(a: T[], i: number, f: (e: T, i: number) => T) => a.map((e, j) => (i === j) ? f(e, j) : e)
+const PlainMove = z.object({
+  conceded: z.literal(false),
+  x: z.number,
+  y: z.number,
+  player: Player
+})
 
-export type WinState = {
-    winner: Player
-    row?: {
-        x: number
-        y: number
-    }[]
-}
+const ConcededMove = z.object({
+  conceded: z.literal(true),
+  player: Player
+})
 
-export type GameData = {
-    board: Board
-    inTurn: Player
-    winState?: WinState
-    stalemate: boolean
-    gameNumber: number
-    gameName: string
-}
+const Move = z.discriminatedUnion("conceded", [PlainMove, ConcededMove])
+
+export type Move = z.infer<typeof Move>
+
+const Row = z.array(
+  z.object({
+    x: z.number,
+    y: z.number,
+  })
+)
+const WinState = z.object({
+  winner: Player,
+  row: z.optional(Row)
+})
+
+export type WinState = z.infer<typeof WinState>
+
+const GameData = z.object({
+  board: Board,
+  inTurn: Player,
+  winState: z.optional(WinState),
+  stalemate: z.boolean,
+  gameNumber: z.number,
+  gameName: z.string
+})
+
+export type GameData = z.infer<typeof GameData>
 
 export type Game = GameData & {
     legalMove: (x: number, y: number) => boolean
@@ -41,6 +55,10 @@ export type Game = GameData & {
     data: () => GameData
     moves: Move[]
 }
+
+const array = <T>(length: number, init: (index: number) => T) => Array.from(new Array(length), (_, i) => init(i))
+
+const updateArray = <T>(a: T[], i: number, f: (e: T, i: number) => T) => a.map((e, j) => (i === j) ? f(e, j) : e)
 
 function createModel(board: Board, inTurn: Player, gameNumber: number, gameName: string, moves: Move[]): Game {
     const setTile = (board: Board, x: number, y: number, value: Tile) => updateArray(board, x, row => updateArray(row, y, _ => value))
