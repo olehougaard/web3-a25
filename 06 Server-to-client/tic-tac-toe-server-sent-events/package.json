@@ -1,0 +1,27 @@
+{
+  "name": "tic-tac-toe-server",
+  "version": "1.0.0",
+  "description": "Server for multiplayer tic-tac-toe",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "tsx --watch gameserver.ts",
+    "publish": "ts-node pubsub.ts"
+  },
+  "author": "oih",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.3",
+    "express": "^4.21.0",
+    "typescript": "^5.6.2",
+    "uuid": "^13.0.0",
+    "ws": "^8.18.0",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.0",
+    "@types/ws": "^8.5.12",
+    "cors": "^2.8.5"
+  }
+}

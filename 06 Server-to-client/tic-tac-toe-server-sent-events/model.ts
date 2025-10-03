@@ -1,0 +1,132 @@
+import * as z from 'zod'
+
+const Player = z.enum(['X', 'O'])
+const Tile = z.nullable(Player)
+const Board = z.array(z.array(Tile).length(3)).length(3)
+
+export type Player = z.infer<typeof Player>
+export type Tile = z.infer<typeof Tile>
+export type Board = z.infer<typeof Board>
+
+const PlainMove = z.object({
+  conceded: z.literal(false),
+  x: z.number,
+  y: z.number,
+  player: Player
+})
+
+const ConcededMove = z.object({
+  conceded: z.literal(true),
+  player: Player
+})
+
+const Move = z.discriminatedUnion("conceded", [PlainMove, ConcededMove])
+
+export type Move = z.infer<typeof Move>
+
+const Row = z.array(
+  z.object({
+    x: z.number,
+    y: z.number,
+  })
+)
+const WinState = z.object({
+  winner: Player,
+  row: z.optional(Row)
+})
+
+export type WinState = z.infer<typeof WinState>
+
+const GameData = z.object({
+  board: Board,
+  inTurn: Player,
+  winState: z.optional(WinState),
+  stalemate: z.boolean,
+  gameNumber: z.number,
+  gameName: z.string
+})
+
+export type GameData = z.infer<typeof GameData>
+
+export type Game = GameData & {
+    legalMove: (x: number, y: number) => boolean
+    makeMove: (x: number, y: number) => any
+    conceded: () => Game
+    data: () => GameData
+    moves: Move[]
+}
+
+const array = <T>(length: number, init: (index: number) => T) => Array.from(new Array(length), (_, i) => init(i))
+
+const updateArray = <T>(a: T[], i: number, f: (e: T, i: number) => T) => a.map((e, j) => (i === j) ? f(e, j) : e)
+
+function createModel(board: Board, inTurn: Player, gameNumber: number, gameName: string, moves: Move[]): Game {
+    const setTile = (board: Board, x: number, y: number, value: Tile) => updateArray(board, x, row => updateArray(row, y, _ => value))
+    
+    type Position = {x: number, y: number}
+
+    const row = (x: number, y: number, dx: number, dy: number): Position[] => array(board.length, i => ({x: x + i * dx, y: y + i * dy}))
+    const verticalRows = array(board.length, i => row(0, i, 1, 0))
+    const horizontalRows = array(board.length, i => row(i, 0, 0, 1))
+    const diagonalRows = [row(0, 0, 1, 1), row(0, 2, 1, -1)]
+    const allRows = verticalRows.concat(horizontalRows).concat(diagonalRows)
+    const plateFull = board.every(row => row.every(x => x))
+    
+    const hasWon = (theRow: Position[], candidate: Player) =>  theRow.every(({x, y}) => board[x][y] === candidate)
+    const winningRow = (candidate: Player) => allRows.find(x => hasWon(x, candidate))
+    const getWinner = (candidate: Player) => {
+        const w = winningRow(candidate)
+        return w && { winner: candidate, row : w }
+    }
+    const winState = getWinner('X') || getWinner('O')
+    const stalemate = plateFull && !winState
+    
+    const legalMove = (x: number, y: number) => {
+        if (x < 0 || y < 0 || x > 2 || y > 2) return false
+        if (board[x][y]) return false
+        if (winState || stalemate) return false
+        return true
+    }
+    
+    const makeMove = (x: number, y: number) => {
+        if (!legalMove(x, y)) throw 'Illegal move'
+        return createModel(setTile(board, x, y, inTurn), (inTurn === 'X') ? 'O' : 'X', gameNumber, gameName, [...moves, {conceded: false, x, y, player: inTurn}])
+    }
+    
+    const data = () => ({board, inTurn, winState, stalemate, gameNumber, gameName})
+
+    const conceded = (): Game => {
+        const winner: Player = inTurn === 'X'? 'O' : 'X'
+        const winState: WinState = { winner, row: undefined}
+        const conceded_state: Game = { 
+            winState, 
+            stalemate: false, 
+            inTurn: winner, 
+            legalMove: () => false, 
+            makeMove: () => conceded_state,
+            conceded: () => conceded_state, 
+            board, 
+            data: () => ({board, inTurn, winState, stalemate, gameNumber, gameName}), 
+            gameNumber, 
+            gameName,
+            moves: [...moves, { conceded: true, player: inTurn }]
+        }
+        return conceded_state
+    }
+    
+    return { 
+        winState, 
+        stalemate, 
+        inTurn, 
+        legalMove, 
+        makeMove,
+        conceded, 
+        board, 
+        data, 
+        gameNumber,
+        gameName, 
+        moves 
+    }
+}
+
+export const model = (gameNumber: number, gameName: string) => createModel(array(3, _ => array<Tile>(3, _ => null)), 'X', gameNumber, gameName, [])
