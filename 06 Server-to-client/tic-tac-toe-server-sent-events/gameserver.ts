@@ -1,30 +1,37 @@
 import express, { type Express, type Request, type Response } from 'express'
-import { GameData, model, type Game, type Move } from './model'
+import * as v from './validation'
+import { model } from './model'
+import type { Game, Move } from './model'
 import bodyParser from 'body-parser'
 import crypto from 'crypto'
 import cors from 'cors'
+import * as z from 'zod'
 
 function startServer() {
   const games: Game[] = []
   const ongoing_games: Record<number, boolean> = {}
 
+  const MessageType = z.enum(['new_game', 'game_starting', 'game_updated', 'move'])
+
+  type MessageType = z.infer<typeof MessageType>
+
   type Subscriber = {
     id: string
     gameNumber?: number
-    messageType: string
+    messageType: MessageType
     response: Response
   }
 
   type SubscriptionService = {
-    subscribe(res: Response, messageType: string, gameNumber?: number): Subscriber
-    send(messageType: string, message: {}, gameNumber: number): void
+    subscribe(res: Response, messageType: MessageType, gameNumber?: number): Subscriber
+    send(messageType: MessageType, message: {}, gameNumber: number): void
     unsubscribe(id: string): void
   }
 
   const subscriptionService = (): SubscriptionService => {
     let subscribers: Subscriber[] = []
     
-    function subscribe(response: Response, messageType: string, gameNumber?: number) {
+    function subscribe(response: Response, messageType: MessageType, gameNumber?: number) {
       const subscriber = {
         id: crypto.randomUUID(),
         gameNumber,
@@ -35,7 +42,7 @@ function startServer() {
       return subscriber
     }
 
-    function send(messageType: string, message: {}, gameNumber: number) {
+    function send(messageType: MessageType, message: {}, gameNumber: number) {
       subscribers
         .filter(s => (s.gameNumber === undefined || s.gameNumber === gameNumber) && s.messageType === messageType)
         .forEach(s => s.response.write(`data: ${JSON.stringify(message)}\n\n`))
@@ -71,11 +78,17 @@ function startServer() {
 
     const gameserver: Express = express()
 
-    gameserver.use(cors())
+    gameserver.use(cors({
+      origin: /:\/\/localhost:/,
+      methods: ['GET', 'POST', 'PATCH', 'OPTIONS']
+    }))
 
     gameserver.use(bodyParser.json())
 
-    type ExtendedGameData = GameData & {ongoing: boolean}
+    const ExtendedGameData = z.intersection(v.GameData, z.object({ongoing: z.boolean()}))
+    const PartialExtendedGameData = z.intersection(v.GameData.partial(), z.object({ongoing: z.boolean().optional()}))
+
+    type ExtendedGameData = z.infer<typeof ExtendedGameData>
 
     interface TypedRequest<BodyType> extends Request {
         body: BodyType
@@ -97,13 +110,17 @@ function startServer() {
     })
 
     gameserver.get('/games/events', (req, res) => {
-      const messageType = req.query.type?.toString() ?? 'new_game'
+      const messageTypeResult = MessageType.safeParse(req.query.type)
+      if (!messageTypeResult.success) {
+        res.status(400).send(z.prettifyError(messageTypeResult.error))
+        return
+      }
 
       res.setHeader('Connection', 'keep-alive')
       res.setHeader('Content-Type', 'text/event-stream')
       res.setHeader('Cache-Control', 'no-cache')
 
-      const sub = subscriptions.subscribe(res, messageType)
+      const sub = subscriptions.subscribe(res, messageTypeResult.data)
 
       req.on('close', () => {
         subscriptions.unsubscribe(sub.id)
@@ -111,59 +128,99 @@ function startServer() {
     })
 
     gameserver.get('/games/:gameNumber/events', (req, res) => {
-      const gameNumber = parseInt(req.params.gameNumber)
-      const messageType = req.query.type?.toString() ?? 'move'
-      res.set({
-      'Cache-Control': 'no-cache',
-      'Content-Type': 'text/event-stream',
-      'Connection': 'keep-alive'
-      })
-      res.flushHeaders()
-      const sub = subscriptions.subscribe(res, messageType, gameNumber)
+      const gameNumberResult = z.coerce.number().safeParse(req.params.gameNumber)
+      if (!gameNumberResult.success) {
+        res.status(400).send(z.prettifyError(gameNumberResult.error))
+        return
+      }
+      const messageTypeResult = MessageType.safeParse(req.query.type)
+      if (!messageTypeResult.success) {
+        res.status(400).send(z.prettifyError(messageTypeResult.error))
+        return
+      }
+
+      res.setHeader('Connection', 'keep-alive')
+      res.setHeader('Content-Type', 'text/event-stream')
+      res.setHeader('Cache-Control', 'no-cache')
+
+      const sub = subscriptions.subscribe(res, messageTypeResult.data, gameNumberResult.data)
       req.on('close', () => {
         subscriptions.unsubscribe(sub.id)
       })
     })
     
     gameserver.get('/games/:gameNumber', (req: Request, res: Response) => {
-        const gameNumber = parseInt(req.params.gameNumber)
-        const ongoing = !!ongoing_games[gameNumber]
-        send_game_data(res, gameNumber, g => ({...g.data(), ongoing}))
+      const gameNumberResult = z.coerce.number().safeParse(req.params.gameNumber)
+      if (!gameNumberResult.success) {
+        res.status(400).send(z.prettifyError(gameNumberResult.error))
+        return
+      }
+      const gameNumber = gameNumberResult.data
+
+      const ongoing = !!ongoing_games[gameNumber]
+      send_game_data(res, gameNumber, g => ({...g.data(), ongoing}))
     })
 
     gameserver.patch('/games/:gameNumber', (req: TypedRequest<Partial<ExtendedGameData>>, res) => {
-        const gameNumber = parseInt(req.params.gameNumber)
-        const gameData = req.body
-        if (!games[gameNumber])
-            res.status(404).send()
-        else if (gameData.ongoing !== undefined) {
-            // Attempting to start a game
-            if (!gameData.ongoing || ongoing_games[gameNumber])
-                res.status(403).send()
-            else {
-                ongoing_games[gameNumber] = true
-                const data = { ...games[gameNumber], ongoing: true }
-                res.send(data)
-                subscriptions.send('game_starting', data, gameNumber)
-                subscriptions.send('game_updated', data, gameNumber)
-            }
+      const gameNumberResult = z.coerce.number().safeParse(req.params.gameNumber)
+      if (!gameNumberResult.success) {
+        res.status(400).send(z.prettifyError(gameNumberResult.error))
+        return
+      }
+      const gameNumber = gameNumberResult.data
+      const gameDataResult = PartialExtendedGameData.safeParse(req.body)
+      if (!gameDataResult.success) {
+        res.status(400).send(z.prettifyError(gameDataResult.error))
+        return
+      }
+
+      const gameData = gameDataResult.data
+
+      if (!games[gameNumber])
+        res.status(404).send()
+      else if (gameData.ongoing !== undefined) {
+        // Attempting to start a game
+        if (!gameData.ongoing || ongoing_games[gameNumber])
+          res.status(403).send()
+        else {
+          ongoing_games[gameNumber] = true
+          const data = { ...games[gameNumber], ongoing: true }
+          res.send(data)
+          subscriptions.send('game_starting', data, gameNumber)
+          subscriptions.send('game_updated', data, gameNumber)
         }
+      }
     })
 
     gameserver.post('/games/:gameNumber/moves', (req: TypedRequest<Move>, res) => {
-      const gameNumber = parseInt(req.params.gameNumber)
-      if (req.body.conceded) {
+      const gameNumberResult = z.coerce.number().safeParse(req.params.gameNumber)
+      if (!gameNumberResult.success) {
+        res.status(400).send(z.prettifyError(gameNumberResult.error))
+        return
+      }
+      const gameNumber = gameNumberResult.data
+
+      const moveResult = v.Move.safeParse(req.body)
+      if (!moveResult.success) {
+        console.log(req.body)
+        console.log(moveResult.error)
+        res.status(400).send(z.prettifyError(moveResult.error))
+        return
+      }
+      const move = moveResult.data
+
+      if (move.conceded) {
         if (!ongoing_games[gameNumber])
-            res.status(403).send()
+          res.status(403).send()
         else {
           games[gameNumber] = games[gameNumber].conceded()
           const data = { ...games[gameNumber], ongoing: false }
-          const player = req.body.player
+          const player = move.player
           subscriptions.send('move', {type: 'conceded', move: {player}, ...data}, gameNumber)
           res.send(data)
         }
       } else {
-        const { x, y, player } = req.body
+        const { x, y, player } = move
         const game = games[gameNumber]
         if (!ongoing_games[gameNumber])
           res.sendStatus(404)
@@ -181,13 +238,19 @@ function startServer() {
     })
 
     gameserver.get('/games/:gameNumber/moves', (req, res) => {
-        const gameNumber = parseInt(req.params.gameNumber)
-        send_game_data(res, gameNumber, g => ({ 
-            moves: g.moves, 
-            inTurn: g.inTurn,
-            winState: g.winState,
-            stalemate: g.stalemate
-        }))
+      const gameNumberResult = z.coerce.number().safeParse(req.params.gameNumber)
+      if (!gameNumberResult.success) {
+        res.status(400).send(z.prettifyError(gameNumberResult.error))
+        return
+      }
+      const gameNumber = gameNumberResult.data
+
+      send_game_data(res, gameNumber, g => ({ 
+          moves: g.moves, 
+          inTurn: g.inTurn,
+          winState: g.winState,
+          stalemate: g.stalemate
+      }))
     })
 
     gameserver.listen(8080, () => console.log('Gameserver listening on 8080'))

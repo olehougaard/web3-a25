@@ -27,12 +27,12 @@
     const events = new EventSource(`http://localhost:8080/games/${model.game.gameNumber}/events?type=move`)
 
     events.onmessage = ({data}) => {
-      const response = JSON.parse(data)
-      if (response.type === 'conceded') {
-        const {type, ...game_data} = response
+      const message = JSON.parse(data)
+      if (message.type === 'conceded') {
+        const {type, ...game_data} = message
         model.applyGameProperties(game_data)
       } else {
-        const {type, move, ...game_data} = response
+        const {type, move, ...game_data} = message
         model.makeMove(move)
         model.applyGameProperties(game_data)
       } 
@@ -44,7 +44,7 @@
   })
 
   async function concede() {
-    const {winState} = await api.concede(model.game.gameNumber!)
+    const {winState} = await api.concede(model.player!, model.game.gameNumber!)
     model.applyGameProperties({winState})
   }
 

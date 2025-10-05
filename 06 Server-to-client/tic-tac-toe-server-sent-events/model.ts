@@ -1,52 +1,15 @@
 import * as z from 'zod'
+import * as v from './validation'
 
-const Player = z.enum(['X', 'O'])
-const Tile = z.nullable(Player)
-const Board = z.array(z.array(Tile).length(3)).length(3)
+export type Player = z.infer<typeof v.Player>
+export type Tile = z.infer<typeof v.Tile>
+export type Board = z.infer<typeof v.Board>
 
-export type Player = z.infer<typeof Player>
-export type Tile = z.infer<typeof Tile>
-export type Board = z.infer<typeof Board>
+export type Move = z.infer<typeof v.Move>
 
-const PlainMove = z.object({
-  conceded: z.literal(false),
-  x: z.number,
-  y: z.number,
-  player: Player
-})
+export type WinState = z.infer<typeof v.WinState>
 
-const ConcededMove = z.object({
-  conceded: z.literal(true),
-  player: Player
-})
-
-const Move = z.discriminatedUnion("conceded", [PlainMove, ConcededMove])
-
-export type Move = z.infer<typeof Move>
-
-const Row = z.array(
-  z.object({
-    x: z.number,
-    y: z.number,
-  })
-)
-const WinState = z.object({
-  winner: Player,
-  row: z.optional(Row)
-})
-
-export type WinState = z.infer<typeof WinState>
-
-const GameData = z.object({
-  board: Board,
-  inTurn: Player,
-  winState: z.optional(WinState),
-  stalemate: z.boolean,
-  gameNumber: z.number,
-  gameName: z.string
-})
-
-export type GameData = z.infer<typeof GameData>
+export type GameData = z.infer<typeof v.GameData>
 
 export type Game = GameData & {
     legalMove: (x: number, y: number) => boolean

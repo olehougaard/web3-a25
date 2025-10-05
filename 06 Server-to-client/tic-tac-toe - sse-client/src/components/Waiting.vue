@@ -18,16 +18,6 @@
       events.close()
     })
   })
-
-  async function waitForPlayer() {
-    const game = await api.readGame(props.gameNumber)
-    if (game.ongoing)
-      model.startGame('X', game)
-    else 
-      setTimeout(waitForPlayer, 100)
-  }
-
-  onMounted(waitForPlayer)
 </script>
 
 <template>

@@ -20,7 +20,7 @@ export const readGame = (gameNumber: number) => read<Game>(`http://localhost:808
 export const readMoves = (gameNumber: number) => read<GetMoveResponse>(`http://localhost:8080/games/${gameNumber}/moves`)
 
 export const createGame = (gameName: string) => create<{gameName: string}, Game>('http://localhost:8080/games', { gameName })
-export const createMove = (gameNumber: number, move: Move) => create<Move, {move: Move} & Partial<Game>>(`http://localhost:8080/games/${gameNumber}/moves`, move)
+export const createMove = (gameNumber: number, move: Move) => create<Move & {conceded:false}, {move: Move} & Partial<Game>>(`http://localhost:8080/games/${gameNumber}/moves`, {...move, conceded: false})
 
 export const joinGame = (gameNumber: number) => patchGame(gameNumber, {ongoing: true})
-export const concede = (gameNumber: number) => create<{conceded: boolean}, GetMoveResponse>(`http://localhost:8080/games/${gameNumber}/moves`, {conceded: true})
+export const concede = (player: Player, gameNumber: number) => create<{conceded: boolean, player: Player}, GetMoveResponse>(`http://localhost:8080/games/${gameNumber}/moves`, {conceded: true, player})

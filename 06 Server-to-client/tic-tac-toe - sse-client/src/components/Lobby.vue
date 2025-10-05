@@ -9,6 +9,10 @@
   const startingGameEvents = new EventSource('http://localhost:8080/games/events?type=game_starting')
 
   onMounted(async () => { 
+    model.games = await api.readGamesList()
+  })
+
+  onMounted(() => {
     newGameEvents.onmessage = (message) => {
       const game = JSON.parse(message.data)
       model.games.push(game)
@@ -23,12 +27,10 @@
   
     startingGameEvents.onerror = console.error
     
-    model.games = await api.readGamesList()
-  })
-
-  onUnmounted(() => {
-    newGameEvents.close()
-    startingGameEvents.close()
+    onUnmounted(() => {
+      newGameEvents.close()
+      startingGameEvents.close()
+    })
   })
 
   const gameName = ref('game')
