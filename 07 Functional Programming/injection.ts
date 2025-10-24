@@ -36,7 +36,7 @@ type Reader = (_: Date) => Promise<Sale[]>
 type Writer = (_: TaxReport[]) => Promise<TaxReceipt>
 
 // Dependency injection
-const reportDailyTaxesDI = (read: Reader, report: Writer) =>async (date: Date) => {
+const reportDailyTaxesDI = (read: Reader, report: Writer) => async (date: Date) => {
   let sales = await read(date)
   let taxes = taxCalc(sales)
   return report(taxes)
