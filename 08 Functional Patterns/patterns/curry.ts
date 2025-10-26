@@ -10,11 +10,10 @@ console.log(addCurry(7)(11))
 
 function add(a: number): (b: number) => number
 function add(a: number, b: number): number
-function add(a: number, b?: number): number | ((b: number) => number) {
+function add(a: number, b?: number) {
   if (b !== undefined)
     return a + b
-  else
-    return (b: number) => a + b
+  return (b: number) => a + b
 }
 
 // Good for

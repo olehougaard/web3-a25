@@ -16,22 +16,22 @@ const dragons = _.filter((pet: Pet) => pet.type === 'dragon')
 const ages = _.map((pet: Pet) => pet.age)
 
 const sumOfAgeOfDragons = (pets: Pet[]) => _.flow([
-    dragons,
-    ages,
-    _.sum
-  ])(pets)
+  dragons,
+  ages,
+  _.sum
+])(pets)
 
-const sumOfAgeOfDragons2 = _.flow([
-    _.filter((pet: Pet) => pet.type === 'dragon'),
-    _.map((pet: Pet) => pet.age),
-    _.sum
-  ])
+const sumOfAgeOfDragons2 = (pets: Pet[]) => _.flow([
+  _.filter((pet: Pet) => pet.type === 'dragon'),
+  _.map((pet: Pet) => pet.age),
+  _.sum
+])(pets)
 
- const sumOfAgeOfDragons3 = _.flow([
-    _.filter(_.matches({type: 'dragon'})),
-    _.map(_.prop('age')),
-    _.sum
-  ])
+const sumOfAgeOfDragons3 = (pets: Pet[]) => _.flow([
+  _.filter(_.matches({type: 'dragon'})),
+  _.map(_.prop('age')),
+  _.sum
+])(pets)
  
 /*
   MongoDB:
