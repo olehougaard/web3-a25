@@ -1,6 +1,12 @@
 import { fromJS, Map, List, Seq, Range } from 'immutable'
 
-const pets = [
+type Pet = {
+  type: 'dog' | 'cat' | 'dragon'
+  name: string
+  age: number
+}
+
+const pets: Pet[] = [
     {type: 'dog', name:'Fido', age: 7}, 
     {type: 'cat', name: 'Hannibal', age: 2}, 
     {type: 'dog', name: 'Rover', age: 3},
@@ -19,12 +25,12 @@ console.log(agesOfPets.toJS())
 
 console.log(list.filter(p => p.type === 'dragon').toJS())
 
-let sumOfAgeOfDragons = list
+let sumOfAgeOfDragons = (list: List<Pet>) => list
   .filter(p => p.type === 'dragon')
   .map(p => p.age)
   .reduce((sum: number, a: number) => sum + a, 0)
 
-console.log(sumOfAgeOfDragons)
+console.log(sumOfAgeOfDragons(list))
 
 const listOfMaps = fromJS(pets)
 let agesOfPets2 = listOfMaps.map(p => p.get('age'))
@@ -32,24 +38,24 @@ console.log(agesOfPets2.toJS())
 
 console.log(listOfMaps.filter(p => p.get('type') === 'dragon').toJS())
 
-sumOfAgeOfDragons = listOfMaps
+const sumOfAgeOfDragonsMaps = (listOfMaps: List<Map<string, string|number>>) => listOfMaps
   .filter(p => p.get('type') === 'dragon')
   .map(p => p.get('age') as number)
   .reduce((sum: number, a: number) => sum + a, 0)
 
-console.log(sumOfAgeOfDragons)
+console.log(sumOfAgeOfDragonsMaps(listOfMaps))
 
 let agesOfPets3 = (Seq(pets)).map(p => p.age)
 console.log(agesOfPets3.toJS())
 
 console.log((Seq(pets)).filter(p => p.type === 'dragon').toJS())
 
-let sumOfAgeOfDragons3 = Seq(pets)
+let sumOfAgeOfDragons3 = (pets: Pet[]) => Seq(pets)
   .filter(p => p.type === 'dragon')
   .map(p => p.age)
   .reduce((sum, age) => sum + age, 0)
 
-console.log(sumOfAgeOfDragons3)
+console.log(sumOfAgeOfDragons3(pets))
 
 function factorial(n: number): number {
   return Range(1, n + 1).reduce((a, b) => a * b, 1)

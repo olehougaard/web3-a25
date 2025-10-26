@@ -3,6 +3,7 @@ export interface Optional<T> {
   ifPresent(consumer: (element: T) => void): void
   map<U>(f: (element: T) => U): Optional<U>
   flatMap<U>(f: (element: T) => U | Optional<U>): Optional<U>
+  filter<S extends T>(predicate: (element: T) => element is S): Optional<S>
   filter(predicate: (element: T) => boolean): Optional<T>
   get(): T
   getOrElse(fallback: T): T
@@ -24,7 +25,9 @@ export function Some<T>(element: T): Optional<T> {
         return u
       return Some(u)
     },
-    filter: predicate => predicate(element) ? self : None(),
+    filter(predicate: (element: T) => boolean): Optional<T> {
+      return predicate(element) ? self : None()
+    },
     get: () => element,
     getOrElse: _ => element,
     or: _ => self
@@ -38,7 +41,9 @@ export function None<T>(): Optional<T> {
     ifPresent: _ => {},
     map<U>(_: (element: T) => U) { return None<U>() },
     flatMap<U>(_: (element: T) => U | Optional<U>) { return None<U>() },
-    filter: _ => self,
+    filter(_predicate: (element: T) => boolean): Optional<T> {
+      return self
+    },
     get: () => { throw new Error('No element') },
     getOrElse: fallback => fallback,
     or: other => other
