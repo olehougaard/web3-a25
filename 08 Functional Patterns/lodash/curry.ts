@@ -33,6 +33,16 @@ const sumOfAgeOfDragons3 = (pets: Pet[]) => _.flow([
   _.sum
 ])(pets)
  
+function better_flow(arg: any, functions: any) {
+  return _.flow(functions)(arg)
+}
+
+const sad = (pets: Pet[]) => better_flow(pets, [
+  _.filter(_.matches({type: 'dragon'})),
+  _.map(_.prop('age')),
+  _.sum
+])
+
 /*
   MongoDB:
   db.pets.aggregate([
